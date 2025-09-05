@@ -44,46 +44,46 @@ def detect():
         logging.critical(f"❌ Failed to load model: {e}")
         return
 
-    while True:
-        try:
-            messages = consumer.consume(num_messages=1, timeout=5.0)  # ✅ returns a list
-            if not messages:
-                continue
-
-            for message in messages:
-                if message.error():
-                    logging.error(f"Consumer error: {message.error()}")
+    try:
+        while True:
+            try:
+                messages = consumer.consume(num_messages=1, timeout=5.0)
+                if not messages:
                     continue
 
-                try:
-                    # Decode Kafka message
-                    record = json.loads(message.value().decode('utf-8'))
+                for message in messages:
+                    if message.error():
+                        logging.error(f"Consumer error: {message.error()}")
+                        continue
 
-                    # Extract the data (Open, Close)
-                    input_data = np.array(record["data"]).reshape(1, -1)
+                    try:
+                        # Decode Kafka message
+                        record = json.loads(message.value().decode('utf-8'))
 
-                    # Predict if the transaction is an anomaly
-                    prediction = clf.predict(input_data)
+                        # Extract the data (Open, Close)
+                        input_data = np.array(record["data"]).reshape(1, -1)
 
-                    if prediction[0] == -1:
-                        # Anomaly detected
-                        score = clf.score_samples(input_data)[0]
-                        record["score"] = round(score, 3)
+                        # Predict if the transaction is an anomaly
+                        prediction = clf.predict(input_data)
 
-                        logging.warning(f"Anomaly detected: {record}")
+                        if prediction[0] == -1:
+                            # Anomaly detected
+                            score = clf.score_samples(input_data)[0]
+                            record["score"] = round(score, 3)
 
-                        producer.produce(
-                            topic=ANOMALIES_TOPIC,
-                            value=json.dumps(record).encode("utf-8")
-                        )
-                        producer.flush()
+                            logging.warning(f"Anomaly detected: {record}")
 
-                except Exception as e:
-                    logging.error(f"Error processing message: {e}")
+                            producer.produce(
+                                topic=ANOMALIES_TOPIC,
+                                value=json.dumps(record).encode("utf-8")
+                            )
+                            producer.flush()
 
-        except Exception as e:
-            logging.error(f"Error during detection loop: {e}")
+                    except Exception as e:
+                        logging.error(f"Error processing message: {e}")
 
+            except Exception as e:
+                logging.error(f"Error during detection loop: {e}")
     finally:
         consumer.close()
 

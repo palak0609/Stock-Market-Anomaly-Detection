@@ -102,7 +102,7 @@ def stock_analysis(data, symbol="AAPL"):
     plt.ylabel("Cumulative Return")
     plt.legend()
     plt.grid(True)
-    plt.show()
+    plt.savefig("plots/monte_carlo.png")
 
     # Final outcomes distribution
     final_returns = sim_df.iloc[-1, :]
